@@ -2,6 +2,8 @@ from contextlib import contextmanager
 from bs4 import BeautifulSoup
 import requests
 import time
+import csv
+import os
 
 # Variables globales
 base_url = "http://books.toscrape.com/"
@@ -24,6 +26,7 @@ def timer(func):
     """
     def wrapper(*args, **kwargs):
 
+        t0 = time.time()
         # Start the stopwatch / counter
         t0_start = time.perf_counter()
 
@@ -36,7 +39,7 @@ def timer(func):
         elapsed_time = tf_stop - t0_start
 
         print("{} - Done in {:.2f}s".format(func.__name__, elapsed_time))
-        print("Elapsed time:", tf_stop - t0_start, "seconds")
+        print(f"Elapsed time: {round((tf_stop - t0), 3)} seconds")
         return result
     return wrapper
 
@@ -47,7 +50,8 @@ def timer(func):
 #     yield
 #     print("{} - done in {:.0f}s".format(title, time.time() - t0))
 
-# Fonction permettant de traiter les requêtes
+
+# Fonction permettant de traiter les requêtes et recupérer le contenu d'une page donnée
 def get_page_content(url, parser="lxml"):
     """
     Fonction permettant de traiter les requêtes et recupérer le contenu d'une page donnée
@@ -126,12 +130,34 @@ def get_single_book_content(url):
     return single_book_infos
 
 
-# Url de la page de tes à traiter
+# url de la page de tes à traiter
 sample_url = "http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"
 
 # Appel de la fonction
-# get_single_book_content(sample_url)
+single_book_datas = get_single_book_content(sample_url)
+columns_names = single_book_datas.keys()
 # timer(get_single_book_content)(sample_url)
+
+
+# Fonction permettant de sauvegarder les données d'un dictionnaire dans un fichier csv
+def save_book_infos_to_csv(dict_datas):
+    """Fonction permettant de sauvegarder les données d'un dictionnaire un fichier csv
+
+    Arguments:
+        book_infos {dict} -- dictionnaire contenant les données du produit
+        csv_file_name {string} -- nom du fichier csv
+    """
+
+    csv_file_name = dict_datas['book_upc'] + ".csv"
+
+    try:
+        with open(csv_file_name, 'a', newline='', encoding='utf-8') as csvfile:
+            fieldnames = columns_names
+
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writerow(single_book_datas)
+    except IOError:
+        print("I/O error")
 
 
 # Fonction permettant de récupérer les liens des catégories
@@ -204,6 +230,61 @@ def get_single_category_book_links(category_url):
 sample_category_url = "http://books.toscrape.com/catalogue/category/books/travel_2/index.html"
 
 
+# Fontion permettant de récupérer des données des livres d'une catégorie
+def get_single_category_book_datas(sample_category_url):
+    """Fonction permettant de récupérer les données des livres d'une catégorie donnée
+
+    Arguments:
+        sample_category_url {string} -- url de la catégorie à traiter
+
+    Returns:
+        list -- liste des données des livres de la catégorie donnée
+    """
+    category_name = sample_category_url.split('/')[6]
+    category_book_links = get_single_category_book_links(sample_category_url)
+
+    category_book_data = []
+    for link in category_book_links:
+        category_book_data.append(get_single_book_content(link))
+
+    return category_book_data
+
+
+# Fonction permettant de sauvegarder les données d'une liste de dictionnaire dans un fichier csv
+def save_books_infos_to_csv(list_dict_datas, file_name):
+    """Fonction permettant de sauvegarder les données d'une liste de dictionnaire dans un fichier csv
+
+    Arguments:
+        list_dict_datas {list} -- liste de dictionnaire contenant les données du produit
+        csv_file_name {string} -- nom du fichier csv
+    """
+
+    csv_file_name = file_name + ".csv"
+    try:
+        with open("datas/"+csv_file_name, 'a', newline='', encoding='utf-8') as csvfile:
+            fieldnames = columns_names
+
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            for book in list_dict_datas:
+                writer.writerow(book)
+    except IOError:
+        print("I/O error")
+
+
+# Fonction permettant de récupérer et de sauvegarder les données des livres d'une catégorie
+def get_and_save_single_category_book_datas(category_url):
+    """Fonction permettant de récupérer et de sauvegarder les données des livres d'une catégorie
+
+    Arguments:
+        sample_category_url {string} -- url de la catégorie à traiter
+    """
+    category_name = category_url.split('/')[6].split('_')[0]
+
+    category_book_datas = get_single_category_book_datas(sample_category_url)
+    save_books_infos_to_csv(category_book_datas, category_name)
+
+
 print("First module's name: {}".format(__name__))
 
 
@@ -218,7 +299,7 @@ def main():
     print("Number of categories :", len(category_links))
 
     print("\n")
-    # Récupération des liens des produits d'une catégorie
+    # Récupération des liens des livres d'une catégorie
     import random
     random_category_url = random.choice(category_links)
     random_category_name = random_category_url.split('/')[6].split('_')[0]
@@ -228,9 +309,13 @@ def main():
     print(
         f"Number of books in the category {random_category_name} : { len(random_category_links)}")
 
-    # Récupération des liens des produits
-    #book_links = get_book_links(category_links)
-    # print(book_links)
+    # Récupération des données des livres d'une catégorie
+    #category_books_data = timer(get_single_category_book_datas)(random_category_url)
+    # print(category_books_data)
+
+    print("\n")
+    # Recupération et sauvegarde des données des livres d'une catégorie donnée
+    timer(get_and_save_single_category_book_datas)(random_category_url)
 
     # Récupération des données des produits
     #books_data = get_books_data(book_links)
