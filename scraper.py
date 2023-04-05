@@ -11,8 +11,6 @@ base_book_url = "http://books.toscrape.com/catalogue/"
 #base_category_url = "http://books.toscrape.com/"
 
 
-
-
 # Fonction permettant de calculer le temps d'exécution d'une fonction
 def timer(func):
     """
@@ -132,6 +130,112 @@ def get_single_book_content(url):
 sample_url = "http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"
 
 # Appel de la fonction
-get_single_book_content(sample_url)
-timer(get_single_book_content)(sample_url)
+# get_single_book_content(sample_url)
+# timer(get_single_book_content)(sample_url)
 
+
+# Fonction permettant de récupérer les liens des catégories
+def get_category_links(url):
+    """Fonction permettant de récupérer les liens des catégories
+
+    Arguments:
+        url {string} -- url de la page à traiter
+
+    Returns:
+        list -- liste des liens des catégories
+    """
+
+    soup = get_page_content(url)
+
+    if soup is None:
+        return None
+    else:
+        category_links = []
+        category_links_extracted = soup.find_all(
+            "ul", class_="nav nav-list")[0].findAll('a')[1:]
+        for link in category_links_extracted:
+            category_links.append(base_url + link['href'])
+
+    return category_links
+
+
+# Fonction permettant de recupérer les liens de livre d'une catégory donnée
+def get_single_category_book_links(category_url):
+    """Fonction permettant de récupérer les liens des livres d'une catégorie donnée
+
+    Arguments:
+        category_url {string} -- url de la catégorie à traiter
+
+        Returns:
+            list -- liste des liens des livres de la catégorie donnée      
+    """
+
+    soup = get_page_content(category_url)
+    categorie_name = category_url.split('/')[6]
+    next_btn = soup.findAll('li', class_="next")
+
+    category_book_links = []
+
+    if len(next_btn) == 0:
+        soup = get_page_content(category_url)
+        articles = soup.findAll('article', class_="product_pod")
+        for article in articles:
+            book_extracted_link = article.find('h3').a["href"]
+            book_link = base_book_url + book_extracted_link.lstrip("../../../")
+            category_book_links.append(book_link)
+    else:
+        num_pages = int(soup.findAll('li', class_="current")
+                        [0].text.strip(" \n ")[-1])
+        for i in range(1, num_pages+1):
+            next_btn_url = next_btn[0].a["href"]
+            page_url = base_page_url + categorie_name + "/page-"+str(i)+".html"
+            soup = get_page_content(url=page_url)
+            articles = soup.findAll('article', class_="product_pod")
+            for article in articles:
+                book_extracted_link = article.find('h3').a["href"]
+                book_link = base_book_url + \
+                    book_extracted_link.lstrip("../../../")
+                category_book_links.append(book_link)
+
+    return category_book_links
+
+
+# Url de la catégory à traiter
+sample_category_url = "http://books.toscrape.com/catalogue/category/books/travel_2/index.html"
+
+
+print("First module's name: {}".format(__name__))
+
+
+def main():
+    # Récupération du contenu de la page
+    timer(get_single_book_content)(sample_url)
+
+    # Récupération des liens des catégories
+    print("\n")
+    category_links = timer(get_category_links)(home_url)
+    #category_links = get_category_links(home_url)
+    print("Number of categories :", len(category_links))
+
+    print("\n")
+    # Récupération des liens des produits d'une catégorie
+    import random
+    random_category_url = random.choice(category_links)
+    random_category_name = random_category_url.split('/')[6].split('_')[0]
+
+    random_category_links = timer(
+        get_single_category_book_links)(random_category_url)
+    print(
+        f"Number of books in the category {random_category_name} : { len(random_category_links)}")
+
+    # Récupération des liens des produits
+    #book_links = get_book_links(category_links)
+    # print(book_links)
+
+    # Récupération des données des produits
+    #books_data = get_books_data(book_links)
+    # print(books_data)
+
+
+if __name__ == "__main__":
+    main()
