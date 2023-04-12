@@ -37,13 +37,13 @@ def timer(func):
 
         t_end = time.time()
         pf_end = time.perf_counter()
-        print(f"Execution time with perf_counter: {pf_end - pf_start} seconds")
+        #print(f"Execution time with perf_counter: {pf_end - pf_start} seconds")
         print("{} - Done in {:.3f}s".format(func.__name__, t_end - t_start))
         return result
     return wrapper
 
 
-@timer
+#@timer
 def get_page_content(url, parser="lxml"):
     """
     Fonction permettant de traiter les requêtes et recupérer le contenu d'une page donnée
@@ -67,7 +67,7 @@ def get_page_content(url, parser="lxml"):
         return extracted_soup
 
 
-@timer
+# @timer
 def extract_single_book_content(url):
     """Fonction permettant de récupérer les données d'un seul produit
 
@@ -231,6 +231,7 @@ def get_single_category_book_links(category_url):
     return category_book_links
 
 
+@timer
 def get_single_category_book_datas(category_url):
     """Fonction permettant de récupérer les données des livres d'une catégorie donnée
 
@@ -305,9 +306,12 @@ def get_and_save_all_books_datas(file_name="__all_books_datas"):
         category_book_datas = get_single_category_book_datas(category_url)
         all_books_datas.extend(category_book_datas)
         print("Nombre de livres traités :", len(all_books_datas))
-        print("Sauvegarde des données de la catégorie :", category_name + "...")
+        print("\n")
+        
+
 
     save_books_infos_to_csv(all_books_datas, file_name)
+    print("Sauvegarde terminé !")
     t2 = time.time()
 
     print("Nombre total de livres traités :", len(all_books_datas))
@@ -335,6 +339,19 @@ def save_book_image(image_url, image_name, image_category):
         print("Erreur lors du téléchargement de l'image :", image_name)
 
 
+def create_folder(folder_name):
+    """Fonction permettant de créer un dossier s'il n'existe 
+
+    Arguments:
+        folder_name {string} -- nom du dossier à créer
+    """
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
+        print("Le dossier a été créé avec succès")
+    else:
+        print("Le dossier existe déjà")
+
+
 def create_category_folder(category):
     """Fonction permettant de créer un dossier de catégorie s'il n'existe pas
 
@@ -343,6 +360,7 @@ def create_category_folder(category):
     """
     if not os.path.exists("datas/images/" + category):
         os.mkdir("datas/images/" + category)
+
 
 @timer
 def save_book_images_by_category_in_subfolder(df):
@@ -368,8 +386,14 @@ def save_book_images_by_category_in_subfolder(df):
         print("Catégorie traitée :", category)
         print("\n")
 
+
 @timer
 def main():
+
+    # Création des dossiers de sauvegarde des données
+    create_folder(folder_name="datas")
+    create_folder(folder_name="datas/images")
+    create_folder(folder_name="datas/csv_files")
 
     # Récupération des liens des catégories
     print("\n")
