@@ -43,7 +43,7 @@ def timer(func):
     return wrapper
 
 
-#@timer
+# @timer
 def get_page_content(url, parser="lxml"):
     """
     Fonction permettant de traiter les requêtes et recupérer le contenu d'une page donnée
@@ -263,7 +263,7 @@ def get_and_save_single_category_book_datas(category_url):
     """
     category_name = category_url.split('/')[6].split('_')[0]
 
-    category_book_datas = extract_and_transform_category_book_datas(category_url)
+    category_book_datas = get_single_category_book_datas(category_url)
     save_books_infos_to_csv(category_book_datas, category_name)
 
     return print(f"Sauvegarde de la catégorie {category_name} terminé !")
@@ -289,10 +289,6 @@ def save_books_infos_to_csv(list_dict_datas, file_name):
 
     except IOError:
         print("I/O error")
-
-
-
-
 
 
 @timer
@@ -326,8 +322,6 @@ def get_and_save_all_books_datas(file_name="__all_books_datas"):
         all_books_datas.extend(category_book_datas)
         print("Nombre de livres traités :", len(all_books_datas))
         print("\n")
-        
-
 
     save_books_infos_to_csv(all_books_datas, file_name)
     print("Sauvegarde terminé !")
