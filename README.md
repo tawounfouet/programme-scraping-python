@@ -32,7 +32,6 @@ pip install -r requirements.txt
 ```
 
 
-
 ## Exécution du code
 Une fois que vous avez installé les librairies nécessaires et créé un environnement virtuel, vous pouvez exécuter le code en utilisant la commande suivante :
     
