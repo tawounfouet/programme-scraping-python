@@ -1,7 +1,7 @@
 import re
 from contextlib import contextmanager
 from bs4 import BeautifulSoup
-#from slugify import slugify_unicode
+from slugify import slugify_unicode
 from slugify import slugify
 import concurrent.futures
 import pandas as pd
@@ -37,13 +37,13 @@ def timer(func):
 
         t_end = time.time()
         pf_end = time.perf_counter()
-        #print(f"Execution time with perf_counter: {pf_end - pf_start} seconds")
+        print(f"Execution time with perf_counter: {pf_end - pf_start} seconds")
         print("{} - Done in {:.3f}s".format(func.__name__, t_end - t_start))
         return result
     return wrapper
 
 
-#@timer
+@timer
 def get_page_content(url, parser="lxml"):
     """
     Fonction permettant de traiter les requêtes et recupérer le contenu d'une page donnée
@@ -67,8 +67,8 @@ def get_page_content(url, parser="lxml"):
         return extracted_soup
 
 
-# @timer
-def extract_single_book_content(url):
+@timer
+def get_single_book_content(url):
     """Fonction permettant de récupérer les données d'un seul produit
 
     Arguments:
@@ -122,14 +122,6 @@ def extract_single_book_content(url):
     return single_book_infos
 
 
-def slugify(s):
-    s = s.lower().strip()
-    s = re.sub(r'[^\w\s-]', '', s)
-    s = re.sub(r'[\s_-]+', '-', s)
-    s = re.sub(r'^-+|-+$', '', s)
-    return s
-
-
 def transform_single_book_data(data):
     """Fonction permettant de nettoyer les données d'un produit d'un dictionnaire
     avant de les insérer dans le fichier csv
@@ -157,12 +149,35 @@ def transform_single_book_data(data):
         re.findall(r'\d+', data['book_availability'])[0])
 
     # conversion de la colonne "book_category" en slug
-    data['book_category'] = slugify(data['book_category'])
+    data['book_category'] = slugify_unicode(data['book_category'])
 
     # conversion de la colonne "book_title" en slug
-    data['book_title'] = slugify(data['book_title'])
+    data['book_title'] = slugify_unicode(data['book_title'])
 
     return data
+
+
+# Fonction permettant de d'insérer les données d'un produit dans le fichier csv depuis un dictionnaire
+def insert_single_book_data(data):
+    """Fonction permettant d'insérer les données d'un produit dans le fichier csv depuis un dictionnaire
+
+    Arguments:
+        data {dict} -- dictionnaire contenant les données du produit
+        columns_names {list} -- liste des noms des colonnes du fichier csv
+    """
+    columns_names = data.keys()
+
+    csv_file_name = data['book_title'] + ".csv"
+
+    with open('books.csv', 'a', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=columns_names)
+        writer.writerow(data)
+
+
+# url de la page de tes à traiter
+sample_url = "http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"
+single_book_datas = get_single_book_content(sample_url)
+columns_names = single_book_datas.keys()
 
 
 @timer
@@ -231,7 +246,7 @@ def get_single_category_book_links(category_url):
     return category_book_links
 
 
-@timer
+# Fontion permettant de récupérer des données des livres d'une catégorie
 def get_single_category_book_datas(category_url):
     """Fonction permettant de récupérer les données des livres d'une catégorie donnée
 
@@ -246,29 +261,15 @@ def get_single_category_book_datas(category_url):
 
     category_book_data = []
     for link in category_book_links:
-        extracted_books_datas = extract_single_book_content(link)
-        transformed_books_datas = transform_single_book_data(
-            extracted_books_datas)
-        category_book_data.append(transformed_books_datas)
+        single_book_datas = get_single_book_content(link)
+        category_book_data.append(single_book_datas)
 
     return category_book_data
 
 
-@timer
-def get_and_save_single_category_book_datas(category_url):
-    """Fonction permettant de récupérer et de sauvegarder les données des livres d'une catégorie
-
-    Arguments:
-        category_url {string} -- url de la catégorie à traiter
-    """
-    category_name = category_url.split('/')[6].split('_')[0]
-
-    category_book_datas = extract_and_transform_category_book_datas(category_url)
-    save_books_infos_to_csv(category_book_datas, category_name)
-
-    return print(f"Sauvegarde de la catégorie {category_name} terminé !")
 
 
+# Fonction permettant de sauvegarder les données d'une liste de dictionnaire dans un fichier csv utilisant writerows
 def save_books_infos_to_csv(list_dict_datas, file_name):
     """Fonction permettant de sauvegarder les données d'une liste de dictionnaire dans un fichier csv
 
@@ -292,7 +293,19 @@ def save_books_infos_to_csv(list_dict_datas, file_name):
 
 
 
+@timer
+def get_and_save_single_category_book_datas(category_url):
+    """Fonction permettant de récupérer et de sauvegarder les données des livres d'une catégorie
 
+    Arguments:
+        category_url {string} -- url de la catégorie à traiter
+    """
+    category_name = category_url.split('/')[6].split('_')[0]
+
+    category_book_datas = extract_and_transform_category_book_datas(category_url)
+    save_books_infos_to_csv(category_book_datas, category_name)
+
+    return print(f"Sauvegarde de la catégorie {category_name} terminé !")
 
 
 @timer
@@ -311,34 +324,73 @@ def get_and_save_all_categories_books_datas():
 
 
 @timer
-def get_and_save_all_books_datas(file_name="__all_books_datas"):
+def get_and_save_all_books_datas():
     """Fonction permettant de récupérer et de sauvegarder données de tous les livres
     """
 
-    t1 = time.time()
-    category_links = get_category_links(home_url)
-
-    all_books_datas = []
+    t1 = time.time() 
+    category_links = get_category_links(home_url)   
+    
+    all_books_datas = []  
     for category_url in category_links:
         category_name = category_url.split('/')[6].split('_')[0]
         print("Traitement de la catégorie :", category_name + "...")
         category_book_datas = get_single_category_book_datas(category_url)
         all_books_datas.extend(category_book_datas)
         print("Nombre de livres traités :", len(all_books_datas))
-        print("\n")
-        
-
-
-    save_books_infos_to_csv(all_books_datas, file_name)
-    print("Sauvegarde terminé !")
+        print("Sauvegarde des données de la catégorie :", category_name + "...")
+    
+    save_books_infos_to_csv(all_books_datas, "__all_books_datas")
     t2 = time.time()
 
     print("Nombre total de livres traités :", len(all_books_datas))
     print("\nTemps d'exécution :", t2-t1)
 
-    df = pd.read_csv("./datas/csv_files/"+file_name+".csv", sep=',')
+    return all_books_datas
 
-    return all_books_datas, df
+
+def transform_extract_datas(file_name):
+    """Fonction permettant de transformer les données d'un fichier csv en dataframe
+
+    Arguments:
+        csv_file_name {string} -- nom du fichier csv
+
+    Returns:
+        dataframe -- dataframe contenant les données du fichier csv
+    """
+    csv_file_name = file_name + ".csv"
+
+    df = pd.read_csv("./datas/csv_files/"+csv_file_name, sep=',')
+
+    # Transformation des données
+    # conversion de la colonne "book_price" en numérique
+    df["book_price"] = df["book_price"].str.replace("£", "")
+    #df["book_price"] = df["book_price"].astype(float)
+    df["book_price"] = pd.to_numeric(df['book_price'], errors='coerce')
+
+    # conversion de la colonne "rating" en numérique
+    rating_dict = {'One': 1, 'Two': 2, 'Three': 3, 'Four': 4, "Five": 5}
+    df['book_rating'] = df['book_rating'].map(rating_dict)
+
+    # extraction des nombres dans book_availability  et conversion en numérique
+    df['book_availability'] = df['book_availability'].str.extract('(\d+)')
+    df["book_availability"] = pd.to_numeric(
+        df['book_availability'], errors='coerce')
+
+    #df['book_availability'] =  df['book_availability'].apply(lambda x: x.split(" ")[2].strip("("))
+    # df['book_availability'] = df['book_availability'].apply(lambda x: x[x.find("(")+1:x.find(")")].strip())
+    #df['book_availability'] = df['book_availability'].astype(int)
+
+    # conversion de la colonne "book_category" en slug
+    df['book_category'] = df['book_category'].apply(lambda s: slugify(s))
+
+    # conversion de la colonne "book_title" en slug
+    df['book_title'] = df['book_title'].apply(lambda s: slugify(s))
+
+    # sauvegarde du dataframe dans un fichier csv
+    df.to_csv("datas/csv_files/"+file_name+"_transformed.csv", index=False)
+
+    return df
 
 
 def save_book_image(image_url, image_name, image_category):
@@ -358,19 +410,7 @@ def save_book_image(image_url, image_name, image_category):
         print("Erreur lors du téléchargement de l'image :", image_name)
 
 
-def create_folder(folder_name):
-    """Fonction permettant de créer un dossier s'il n'existe 
-
-    Arguments:
-        folder_name {string} -- nom du dossier à créer
-    """
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-        print("Le dossier a été créé avec succès")
-    else:
-        print("Le dossier existe déjà")
-
-
+# Fonction permettant de créer un dossier de catégorie s'il n'existe pas
 def create_category_folder(category):
     """Fonction permettant de créer un dossier de catégorie s'il n'existe pas
 
@@ -381,7 +421,9 @@ def create_category_folder(category):
         os.mkdir("datas/images/" + category)
 
 
-@timer
+
+
+# Fonction permettant de sauvegarder les images des livres à partir de leur url obtenu du dataframe par catégorie dans un dossier par catégorie
 def save_book_images_by_category_in_subfolder(df):
     """Fonction permettant de sauvegarder les images des livres à partir de leur url obtenu du dataframe par catégorie dans un dossier par catégorie
 
@@ -395,7 +437,7 @@ def save_book_images_by_category_in_subfolder(df):
         create_category_folder(category)
 
         for index, row in category_df.iterrows():
-            print("\tTraitement du livre :", row.book_title)
+            print("Traitement du livre :", row.book_title)
             image_url = row.book_img_link
             image_name = row.book_title
             image_category = row.book_category
@@ -406,31 +448,33 @@ def save_book_images_by_category_in_subfolder(df):
         print("\n")
 
 
-@timer
 def main():
-
-    # Création des dossiers de sauvegarde des données
-    create_folder(folder_name="datas")
-    create_folder(folder_name="datas/images")
-    create_folder(folder_name="datas/csv_files")
 
     # Récupération des liens des catégories
     print("\n")
-    category_links = get_category_links(home_url)
+    category_links = timer(get_category_links)(home_url)
     print("Number of categories :", len(category_links))
 
     print("\n")
+    # Phase 1 du processus ETL - Etract
     # Recupération et sauvegarde des données de tous les livres
     print("Initialisation du processus d'extraction...")
-    books_data_dict, books_data_df = get_and_save_all_books_datas()
+    #books_datas = timer(get_and_save_all_books_datas())
 
     #  Recupération et sauvegarde des données de tous les livres par catégorie
-    get_and_save_all_categories_books_datas()
+    # get_and_save_all_categories_books_datas()
 
     print("\n")
+    # Phase 2 du processus ETL - Transform
+    # Transformation des données
+    print("Initialisation du processus de traitement ...")
+    book_df = timer(transform_extract_datas)("__all_books_datas")
+
+    print("\n")
+    # Phase 3 du processus ETL - Load
     # Sauvegarde des images des livres
     print("Initialisation du processus de sauvegarde d'images ...")
-    save_book_images_by_category_in_subfolder(books_data_df)
+    # timer(save_book_images_by_category_in_subfolder)(book_df)
 
 
 if __name__ == "__main__":
