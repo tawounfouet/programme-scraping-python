@@ -6,11 +6,6 @@ Ce code permet de scraper les données des livres sur le site books.toscrape.com
 
 
 ## Prérequis : Mise en Place de l'environnement de développement 
-Avant de pouvoir exécuter le code, vous devez installer les librairies nécessaires. Les librairies sont listées dans le fichier requirements.txt. Vous pouvez les installer en exécutant la commande suivante :
-
-```bash
-pip install -r requirements.txt
-```
 
 Il est recommandé d'utiliser un environnement virtuel pour l'installation de ces librairies. Vous pouvez créer un environnement virtuel en utilisant virtualenv. Si vous n'avez pas encore installé virtualenv, vous pouvez l'installer en utilisant la commande suivante :
     
@@ -29,6 +24,14 @@ Ceci va créer un environnement virtuel nommé venv dans le répertoire courant.
 ```bash
 source env/bin/activate
 ```
+
+Une fois que vous avez activé l'environnement virtuel, vous pouvez installer les librairies nécessaires en utilisant la commande suivante :
+
+```bash
+pip install -r requirements.txt
+```
+
+
 
 ## Exécution du code
 Une fois que vous avez installé les librairies nécessaires et créé un environnement virtuel, vous pouvez exécuter le code en utilisant la commande suivante :
